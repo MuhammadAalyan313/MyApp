@@ -3,16 +3,17 @@ import React, { useState, ChangeEvent } from "react";
 import Image from "next/image";
 import { FaFacebookF, FaTwitter } from "react-icons/fa"; // Import Facebook and Twitter icons
 import { FiType } from "react-icons/fi"; // Import the change font icon
+import { FacebookShareButton, TwitterShareButton, FacebookIcon, TwitterIcon } from 'react-share';
 
 const ImageCaptionGenerator: React.FC = () => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [caption, setCaption] = useState<string>("");
   const [fontStyle, setFontStyle] = useState<string>("font-serif");
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedImage(URL.createObjectURL(file));
+      setSelectedImage(file);
     }
   };
 
@@ -26,8 +27,38 @@ const ImageCaptionGenerator: React.FC = () => {
     );
   };
 
+  const handleGenerateCaption = async () => {
+    if (!selectedImage) {
+      alert('Please select an image first.');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedImage);
+
+      const response = await fetch('http://localhost:5000/generatecaption', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setCaption(result.caption);
+      } else {
+        alert('Error generating caption: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    }
+  };
+
+  const shareUrl = selectedImage ? URL.createObjectURL(selectedImage) : '';
+
   return (
-    <div>
+    <div className="flex flex-col items-center">
       <div className="text-center mb-10">
         <h1 className="scroll-m-20 text-xl font-extrabold tracking-tight lg:text-2xl text-black">
           Generate Caption
@@ -37,10 +68,10 @@ const ImageCaptionGenerator: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-start md:justify-start ml-36">
-        <div className="mr-4 mb-4 mt-3 md:mb-0 md:ml-36">
+      <div className="flex flex-col md:flex-row items-center justify-center space-x-8">
+        <div className="mb-4 mt-3">
           <div
-            className={`w-96 h-80 mb-16 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 ${
+            className={`w-[400px] h-[400px] border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-500 ${
               selectedImage ? "bg-gray-100" : ""
             }`}
           >
@@ -51,45 +82,60 @@ const ImageCaptionGenerator: React.FC = () => {
                   htmlFor="file-input"
                   className="absolute top-0 bottom-0 left-0 right-0 flex items-center justify-center cursor-pointer"
                 >
-                  {/* <AiOutlinePlus className="text-4xl" /> */}
+                  <input
+                    id="file-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
                 </label>
-                <input
-                  id="file-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
               </>
             )}
             {selectedImage && (
               <Image
-                src={selectedImage}
+                src={URL.createObjectURL(selectedImage)}
                 alt="Uploaded"
-                width={300}
-                height={300}
+                width={400} // Increase image width
+                height={400} // Increase image height
               />
             )}
           </div>
         </div>
 
-        <div className="relative">
+        <div className="flex flex-col items-center">
           <input
             type="text"
             value={caption}
             onChange={handleCaptionChange}
-            placeholder="Generating Caption in Urdu"
-            className={`w-96 h-32 border-4 border-teal-700 border-solid bg-transparent outline-none px-10 mb-24 ml-6 mt-14 shadow-lg text-teal-700 ${fontStyle}`}
+            placeholder="Generated Caption"
+            className={`w-[500px] h-[100px] border-4 border-teal-700 border-solid bg-transparent outline-none px-10 shadow-lg text-teal-700 ${fontStyle}`}
           />
-          {/* Icons placed at the bottom right */}
-          <div className="absolute bottom-12 right-6 flex space-x-3 text-teal-700">
-            <FaFacebookF className="text-xl cursor-pointer" />
-            <FaTwitter className="text-xl cursor-pointer" />
+          <button
+            className="mt-4 flex space-x-3 text-white bg-teal-800 px-4 py-2 rounded"
+            onClick={handleGenerateCaption}
+          >
+            Generate
+          </button>
+          <div className="mt-4 flex space-x-3 text-teal-700">
+            <FacebookShareButton
+              url={shareUrl}
+              quote={caption}
+              className="flex items-center"
+            >
+              <FacebookIcon size={32} round />
+            </FacebookShareButton>
+            <TwitterShareButton
+              url={shareUrl}
+              title={caption}
+              className="flex items-center"
+            >
+              <TwitterIcon size={32} round />
+            </TwitterShareButton>
             <FiType
               className="text-2xl font-extrabold cursor-pointer"
               onClick={handleFontChange}
             />
-            
           </div>
         </div>
       </div>
